@@ -1,0 +1,49 @@
+# =============================================================================
+# Docker Compose for local development
+# See MANUAL_CHANGES_NEEDED.md for required environment variables.
+# =============================================================================
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB:       central_auth_db
+      POSTGRES_USER:     central_auth_owner    # migration role (schema owner)
+      POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:-dev_owner_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      # Provisioning script creates the app role (no BYPASSRLS) and RLS policies.
+      - ./docs/db-provisioning.sql:/docker-entrypoint-initdb.d/01-provisioning.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U central_auth_owner -d central_auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  central-auth-service:
+    build: .
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # DB — app role (no BYPASSRLS)
+      CENTRAL_AUTH_DB_URL:               jdbc:postgresql://postgres:5432/central_auth_db
+      CENTRAL_AUTH_DB_APP_USER:          central_auth_app
+      CENTRAL_AUTH_DB_APP_PASSWORD:      ${CENTRAL_AUTH_DB_APP_PASSWORD:-dev_app_pass}
+      # DB — migration role (schema owner)
+      CENTRAL_AUTH_DB_MIGRATION_USER:    central_auth_owner
+      CENTRAL_AUTH_DB_MIGRATION_PASSWORD: ${POSTGRES_OWNER_PASSWORD:-dev_owner_pass}
+      # Secrets (never hardcoded — supply via .env or a secret manager in production)
+      CENTRAL_AUTH_BOOTSTRAP_SECRET:     ${CENTRAL_AUTH_BOOTSTRAP_SECRET:-CHANGE_ME_AT_LEAST_16_CHARS}
+      CENTRAL_AUTH_TOTP_MASTER_KEY:      ${CENTRAL_AUTH_TOTP_MASTER_KEY:-}
+      CENTRAL_AUTH_TOTP_MASTER_KID:      ${CENTRAL_AUTH_TOTP_MASTER_KID:-dev-key-1}
+    volumes:
+      - logo_storage:/app/storage/logos
+
+volumes:
+  pg_data:
+  logo_storage:

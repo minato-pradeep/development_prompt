@@ -1,0 +1,231 @@
+{
+  "info": {
+    "name": "Central Auth Service",
+    "description": "Multi-Tenant Central Authentication, SSO and User Repository Microservice.\nBase URL: {{baseUrl}} (default: http://localhost:8081)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",         "value": "http://localhost:8081" },
+    { "key": "platformToken",   "value": "" },
+    { "key": "tenantToken",     "value": "" },
+    { "key": "refreshToken",    "value": "" },
+    { "key": "challengeToken",  "value": "" },
+    { "key": "companyCode",     "value": "ACME" },
+    { "key": "companyId",       "value": "" }
+  ],
+  "item": [
+    {
+      "name": "JWKS (public)",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/.well-known/jwks.json",
+        "description": "Fetch the public JWKS for ES256 JWT signature verification."
+      }
+    },
+    {
+      "name": "Platform — Super Admin",
+      "item": [
+        {
+          "name": "Login (step 1: password)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/platform/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"superadmin\",\"password\":\"{{bootstrapSecret}}\"}"
+            }
+          }
+        },
+        {
+          "name": "TOTP Setup",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/platform/auth/totp/setup",
+            "header": [{ "key": "X-Challenge-Token", "value": "{{challengeToken}}" }]
+          }
+        },
+        {
+          "name": "TOTP Activate",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/platform/auth/totp/activate",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"challengeToken\":\"{{challengeToken}}\",\"totpCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "TOTP Verify",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/platform/auth/totp/verify",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"challengeToken\":\"{{challengeToken}}\",\"totpCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "Create Company + Admin",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/platform/companies",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{platformToken}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"ACME Corp\",\"companyCode\":\"ACME\",\"email\":\"admin@acme.com\",\"timeZone\":\"UTC\",\"defaultLanguage\":\"en\",\"admin\":{\"username\":\"companyadmin\",\"email\":\"admin@acme.com\",\"firstName\":\"Admin\",\"lastName\":\"User\"}}"
+            }
+          }
+        },
+        {
+          "name": "List Companies",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/platform/companies",
+            "header": [{ "key": "Authorization", "value": "Bearer {{platformToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tenant — Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"companyCode\":\"{{companyCode}}\",\"username\":\"companyadmin\",\"password\":\"changeme\"}"
+            }
+          }
+        },
+        {
+          "name": "TOTP Verify",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/totp/verify",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"challengeToken\":\"{{challengeToken}}\",\"totpCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/refresh",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refreshToken\":\"{{refreshToken}}\"}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"refreshToken\":\"{{refreshToken}}\"}"
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/forgot-password",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"companyCode\":\"{{companyCode}}\",\"username\":\"someuser\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/users/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }]
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/users",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{tenantToken}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"jdoe\",\"email\":\"jdoe@acme.com\",\"firstName\":\"John\",\"lastName\":\"Doe\"}"
+            }
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/users",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "OAuth2",
+      "item": [
+        {
+          "name": "Token Introspect",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/oauth/introspect",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tenantToken}}" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{ "key": "token", "value": "{{tenantToken}}" }]
+            }
+          }
+        },
+        {
+          "name": "Client Credentials Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/oauth/token",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type",     "value": "client_credentials" },
+                { "key": "client_id",      "value": "my-service-client" },
+                { "key": "client_secret",  "value": "secret" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

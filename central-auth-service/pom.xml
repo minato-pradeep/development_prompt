@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Multi-Tenant Central Authentication, SSO and User Repository Microservice.
+
+        All versions below are verified against Maven Central and the Spring Boot 4.1.2 BOM
+        (spring-boot-dependencies-4.1.2). Spring Boot 4.1.2 manages:
+          - Spring Framework 7.x, Spring Security 7.x
+          - Jackson 3.1.7 (tools.jackson, primary) and Jackson 2.21.7 (com.fasterxml, compat)
+          - Flyway 12.4.0, Hibernate 7.4.13.Final, Jakarta Persistence 3.2.0,
+            Jakarta Servlet 6.1.0, Jakarta Validation 3.1.1, H2 2.4.240
+        Boot 4 modular starters are used (webmvc, security-oauth2-resource-server, flyway, ...).
+        See README.md for the full version matrix and verification notes.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.2</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.userrepo.auth</groupId>
+    <artifactId>central-auth-service</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>central-auth-service</name>
+    <description>Multi-Tenant Central Authentication, SSO and User Repository Microservice</description>
+
+    <properties>
+        <!-- Target the Java 25 LTS runtime (built with Temurin 25.0.5). -->
+        <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Versions NOT managed by the Spring Boot BOM (explicitly pinned). -->
+        <springdoc-openapi.version>3.2.0</springdoc-openapi.version>
+        <bouncycastle.version>1.86</bouncycastle.version>
+        <java-otp.version>1.0.0</java-otp.version>
+    </properties>
+
+    <dependencies>
+        <!-- Web layer: Boot 4 modular web starter (replaces Boot 3 spring-boot-starter-web). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+
+        <!-- Bean validation (Jakarta Validation 3.1.1). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- JPA / Hibernate 7.4.13.Final, Jakarta Persistence 3.2.0. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Low-level JDBC (for per-transaction SET LOCAL app.company_id and RLS helpers). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <!-- Flyway 12.4.0 via the dedicated Boot 4 modular starter. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+
+        <!-- Flyway PostgreSQL dialect (Flyway 10+ splits database support into modules). -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL JDBC driver (version managed by Boot BOM). -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Spring Security 7.x core. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!--
+            OAuth2 resource server: brings Nimbus JOSE+JWT (ES256/JWT decoding/verification).
+            Boot 4 modular security starter.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <!-- Actuator: health/info endpoints (used for readiness + JWKS health). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- OpenAPI 3 + Swagger UI (targets Spring Boot 4 / Spring Framework 7). -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc-openapi.version}</version>
+        </dependency>
+
+        <!-- Bouncy Castle: pure-Java Argon2id (Argon2BytesGenerator) for password hashing. -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
+        </dependency>
+
+        <!-- RFC 4226/6238 TOTP (HMAC-SHA1, 6 digits, 30s). Lightweight, pure Java. -->
+        <dependency>
+            <groupId>com.eatthepath</groupId>
+            <artifactId>java-otp</artifactId>
+            <version>${java-otp.version}</version>
+        </dependency>
+
+        <!-- AES-GCM at rest uses the JDK's built-in javax.crypto (no extra dependency). -->
+
+        <!-- ===================== Test scope ===================== -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Testcontainers 2.0.x (PostgreSQL). Requires Docker to RUN; build/compile does not.
+             NOTE: Testcontainers 2.0 renamed modules with the "testcontainers-" prefix
+             (postgresql -> testcontainers-postgresql, junit-jupiter -> testcontainers-junit-jupiter).
+             Versions are managed by the testcontainers-bom 2.0.5 imported via the Boot BOM.
+             See MANUAL_CHANGES_NEEDED.md for running these tests locally. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

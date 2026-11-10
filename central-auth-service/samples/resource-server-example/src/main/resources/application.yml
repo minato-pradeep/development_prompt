@@ -1,0 +1,21 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: sample-resource-server
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Spring auto-validates issuer if set here.
+          issuer-uri: ${CENTRAL_AUTH_ISSUER:http://localhost:8081}
+          jwk-set-uri: ${CENTRAL_AUTH_JWKS_URI:http://localhost:8081/.well-known/jwks.json}
+
+central-auth:
+  jwks-uri: ${CENTRAL_AUTH_JWKS_URI:http://localhost:8081/.well-known/jwks.json}
+  issuer:   ${CENTRAL_AUTH_ISSUER:http://localhost:8081}
+
+logging:
+  level:
+    org.springframework.security: INFO

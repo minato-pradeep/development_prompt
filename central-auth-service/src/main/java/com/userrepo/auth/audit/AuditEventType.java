@@ -1,0 +1,58 @@
+package com.userrepo.auth.audit;
+
+/**
+ * Audit event types recorded by the service (Section 19). Names map directly to
+ * the {@code event_type} column in {@code audit_logs}.
+ */
+public enum AuditEventType {
+
+    // Platform / bootstrap
+    PLATFORM_BOOTSTRAP,
+    PLATFORM_LOGIN_SUCCESS,
+    PLATFORM_LOGIN_FAILURE,
+    PLATFORM_TOTP_ENROLLMENT,
+    PLATFORM_TOTP_RESET,
+    PLATFORM_MFA_RECOVERY,
+    PLATFORM_TOKEN_REVOCATION,
+    PLATFORM_LOGOUT,
+    BREAK_GLASS_LOGIN,
+
+    // Company
+    COMPANY_CREATED,
+    COMPANY_ACTIVATED,
+    COMPANY_DEACTIVATED,
+    COMPANY_UPDATED,
+    COMPANY_SETTINGS_UPDATED,
+    COMPANY_AUTH_SETTINGS_UPDATED,
+    COMPANY_LOGO_UPDATED,
+
+    // Users / roles
+    USER_CREATED,
+    USER_UPDATED,
+    USER_DEACTIVATED,
+    USER_UNLOCKED,
+    USER_PASSWORD_RESET,
+    USER_PASSWORD_CHANGED,
+    ROLE_ASSIGNED,
+    PERMISSION_CHANGED,
+
+    // Auth
+    LOGIN_SUCCESS,
+    LOGIN_FAILURE,
+    TOTP_ENROLLMENT,
+    TOTP_RESET,
+    MFA_RECOVERY,
+    LOGIN_METHOD_CHANGED,
+    TOKEN_REVOCATION,
+    SESSION_REVOCATION,
+
+    // SSO
+    MICROSOFT_SSO_CONFIG_CHANGED,
+    SSO_LOGIN_SUCCESS,
+    SSO_LOGIN_FAILURE,
+
+    // Service clients
+    SERVICE_CLIENT_REGISTERED,
+    SERVICE_CLIENT_ROTATED,
+    SERVICE_CLIENT_DISABLED
+}

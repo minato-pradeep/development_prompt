@@ -1,0 +1,32 @@
+# Build output
+target/
+build/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Secrets / local config (never commit real secrets)
+application-local.yml
+application-secret.yml
+*.env
+.env
+
+# Spring Boot generated keys / local storage
+storage/
+*.keystore
+*.p12
+*.pem

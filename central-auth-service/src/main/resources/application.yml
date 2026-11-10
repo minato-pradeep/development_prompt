@@ -1,0 +1,143 @@
+# =============================================================================
+# Central Authentication Service - application configuration
+# =============================================================================
+# Sensitive values (DB credentials, signing keys, bootstrap secret, master
+# encryption key for TOTP secrets) MUST be supplied via environment variables or
+# a secrets manager. Never commit real secrets to this file.
+# =============================================================================
+
+server:
+  port: 8081
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: central-auth-service
+
+  # --- Datasource -------------------------------------------------------------
+  # PostgreSQL is the ONLY required infrastructure dependency.
+  # The application role MUST NOT have BYPASSRLS; migrations run as a privileged role.
+  datasource:
+    url: ${CENTRAL_AUTH_DB_URL:jdbc:postgresql://localhost:5432/central_auth_db}
+    username: ${CENTRAL_AUTH_DB_APP_USER:central_auth_app}
+    password: ${CENTRAL_AUTH_DB_APP_PASSWORD:changeme}
+    hikari:
+      # The app role connects without BYPASSRLS; Row-Level Security applies.
+      maximum-pool-size: 20
+      connection-init-sql: ""  # per-transaction company context is set in code, not here
+
+  # --- Flyway -----------------------------------------------------------------
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # Migrations run with a privileged role that CAN set Row-Level Security policies.
+    # In production these come from the environment; locally they may equal the app user
+    # only if that user is the schema owner (dev only).
+    url: ${CENTRAL_AUTH_DB_MIGRATION_URL:${spring.datasource.url}}
+    user: ${CENTRAL_AUTH_DB_MIGRATION_USER:${spring.datasource.username}}
+    password: ${CENTRAL_AUTH_DB_MIGRATION_PASSWORD:${spring.datasource.password}}
+    baseline-on-migrate: false
+
+  # --- JPA / Hibernate --------------------------------------------------------
+  jpa:
+    hibernate:
+      # Flyway owns the schema; Hibernate must not create/alter tables.
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: false
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+# --- API docs (springdoc-openapi) ---------------------------------------------
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+
+# --- Actuator ----------------------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# =============================================================================
+# Application-specific configuration (prefix: app)
+# =============================================================================
+app:
+  # --- Token / session defaults (Section 13 / Section 30.6) -------------------
+  tokens:
+    issuer: ${CENTRAL_AUTH_ISSUER:http://localhost:8081}
+    # Platform (Super Admin) tokens use a distinct issuer/audience scope.
+    platform-issuer: ${CENTRAL_AUTH_PLATFORM_ISSUER:http://localhost:8081/platform}
+    access-token-ttl-seconds: 900            # 15 minutes
+    platform-access-token-ttl-seconds: 900   # 15 minutes
+    # Refresh lifetimes by client type (configurable defaults)
+    refresh-web-absolute-seconds: 43200     # 12 hours
+    refresh-web-idle-seconds: 1800          # 30 min
+    refresh-desktop-absolute-seconds: 259200 # 3 days
+    refresh-desktop-idle-seconds: 86400      # 1 day
+    refresh-mobile-absolute-seconds: 1209600 # 14 days
+    refresh-mobile-idle-seconds: 2592000     # 30 days
+    # Company Admin accounts use a shorter absolute refresh lifetime on desktop/mobile.
+    admin-refresh-desktop-mobile-absolute-seconds: 604800  # 7 days
+    refresh-rotation: true                   # rotate on every use; replay revokes family
+
+  # --- Password policy defaults (Section 8) ---------------------------------
+  password:
+    min-length: 12
+    history-count: 5
+    max-failures: 5
+    breached-password-check: true
+    temp-password-ttl-seconds: 259200        # 72 hours
+
+  # --- TOTP (Section 6) ------------------------------------------------------
+  totp:
+    period-seconds: 30
+    digits: 6
+    algorithm: HmacSHA1
+    tolerance-steps: 1                       # +/- 1 step
+    recovery-code-count: 10
+
+  # --- Rate limiting / lockout (Section 20) ---------------------------------
+  rate-limit:
+    store: postgres                          # multi-instance consistent (not in-memory)
+
+  # --- Bootstrap (Section 4) -------------------------------------------------
+  bootstrap:
+    # One-time Super Admin bootstrap secret from the environment or a secret manager.
+    # After the first Super Admin completes enrollment, the bootstrap path is disabled.
+    secret-env-var: CENTRAL_AUTH_BOOTSTRAP_SECRET
+
+  # --- Master encryption key for TOTP secrets at rest (Section 6) ----------
+  # Key identifier + wrapped key from a secret manager / KMS in production.
+  encryption:
+    totp-secret:
+      master-key-env-var: CENTRAL_AUTH_TOTP_MASTER_KEY
+      kid-env-var: CENTRAL_AUTH_TOTP_MASTER_KID
+
+  # --- Logo upload (Section 8) ----------------------------------------------
+  logo:
+    max-size-bytes: 5242880                  # 5 MiB
+    max-width-px: 1024
+    max-height-px: 1024
+    allowed-content-types: image/png, image/jpeg
+
+# Logging: never log secrets. See audit/AuditLogService for the append-only model.
+logging:
+  level:
+    com.userrepo.auth: INFO
+    org.springframework.security: INFO
